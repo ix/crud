@@ -145,8 +145,8 @@ Selection perform_selection () {
 
 int main(int argc, char **argv) {
 #ifdef __OpenBSD__
-	if (pledge("stdio rpath unix prot_exec", NULL) == -1)
-		err(1, "pledge");
+  if (pledge("stdio rpath unix prot_exec", NULL) == -1)
+    err(1, "pledge");
 #endif
 
   Selection drawn;
