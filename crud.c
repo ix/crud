@@ -1,3 +1,4 @@
+#include <err.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -143,6 +144,11 @@ Selection perform_selection () {
 }
 
 int main(int argc, char **argv) {
+#ifdef __OpenBSD__
+	if (pledge("stdio rpath unix prot_exec", NULL) == -1)
+		err(1, "pledge");
+#endif
+
   Selection drawn;
   setup();
 
