@@ -69,7 +69,7 @@ WindowSelection make_selection(Selection dimensions) {
   XSetWindowAttributes attributes;
   unsigned long value_mask = CWBackPixel | CWOverrideRedirect | CWEventMask;
   Screen* sscreen = ScreenOfDisplay(display, DefaultScreen(display));
-    
+
   if (dimensions.border < 1)
     dimensions.border = 1;
 
@@ -82,7 +82,7 @@ WindowSelection make_selection(Selection dimensions) {
                   0, CopyFromParent, InputOutput, CopyFromParent, value_mask, &attributes);
 
   XRectangle rects[4];
-  
+
   rects[0].x = dimensions.x - dimensions.border;
   rects[0].y = dimensions.y - dimensions.border;
   rects[0].width = dimensions.border;
@@ -108,24 +108,24 @@ WindowSelection make_selection(Selection dimensions) {
   XRectangle rect;
 
   rect.x = rect.y = rect.width = rect.height = 0;
-  
+
   XShapeCombineRectangles(display, window, ShapeInput, 0, 0, &rect, 1, ShapeSet, 0);
 
   XMapWindow(display, window);
-  
+
   return (WindowSelection) {
     .selection = dimensions,
     .window    = window
   };
 }
 
+int destroy_check(Display* display, XEvent* ev, XPointer win) {
+  return ev->type == DestroyNotify && ev->xdestroywindow.window == *((Window*)win);
+}
+
 void destroy_selection(WindowSelection* sel) {
   XEvent ev;
-  
-  int destroy_check(Display* display, XEvent* ev, XPointer win) {
-    return ev->type == DestroyNotify && ev->xdestroywindow.window == *((Window*)win);
-  }
-  
+
   XSetWindowBackground(display, sel->window, 0);
   XClearWindow(display, sel->window);
   XDestroyWindow(display, sel->window);
@@ -156,7 +156,7 @@ void set_selection(WindowSelection* sel, Selection dimensions) {
   rects[3].height = dimensions.border;
 
   sel->selection = dimensions;
-  
+
   XShapeCombineRectangles(display, sel->window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
 }
 
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 #endif
 
   setup();
-  
+
   // make a selection and make it as small as possible
   WindowSelection ws = make_selection((Selection) {
     .x = 0,
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
   XEvent event;
 
   switch_cursor(&cursor[1]);
-  
+
   while (!done) {
     XNextEvent(display, &event);
     switch (event.type) {
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
           .width = width,
           .height = height,
           .border = BORDER
-        });        
+        });
       }
 
       break;
@@ -246,14 +246,14 @@ int main(int argc, char **argv) {
       break;
     }
   }
-  
+
   destroy_selection(&ws);
 
   XUngrabPointer(display, CurrentTime);
   XSync(display, 1);
-  
+
   Selection drawn = ws.selection;
-  
+
   printf("W=%d\nH=%d\nX=%d\nY=%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
   printf("G=%dx%d+%d+%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
 
