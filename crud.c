@@ -6,6 +6,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
+#include <X11/extensions/shape.h>
 
 #include "config.h"
 
@@ -17,9 +18,15 @@ enum Cursors {
 typedef struct {
   int x;
   int y;
-  int w;
-  int h;
+  int width;
+  int height;
+  int border;
 } Selection;
+
+typedef struct {
+  Selection selection;
+  Window window;
+} WindowSelection;
 
 // static values, these are initialized in setup.
 static Cursor cursor[Crosshair + 1];
@@ -58,28 +65,128 @@ void switch_cursor(Cursor* cursor) {
                None, *cursor, CurrentTime);
 }
 
-Selection perform_selection () {
-  int x = 0, y = 0;
-  int width = 0, height = 0;
-  int start_x = 0, start_y = 0;
-  XEvent event;
-  GC sel_gc;
-  XGCValues sel_gv;
+WindowSelection make_selection(Selection dimensions) {
+  XSetWindowAttributes attributes;
+  unsigned long value_mask = CWBackPixel | CWOverrideRedirect | CWEventMask;
+  Screen* sscreen = ScreenOfDisplay(display, DefaultScreen(display));
+    
+  if (dimensions.border < 1)
+    dimensions.border = 1;
+
+  attributes.background_pixel = FOREGROUND_COLOR;
+  attributes.override_redirect = true;
+  attributes.event_mask = StructureNotifyMask;
+
+  Window window =
+    XCreateWindow(display, root, 0, 0, WidthOfScreen(sscreen), HeightOfScreen(sscreen),
+                  0, CopyFromParent, InputOutput, CopyFromParent, value_mask, &attributes);
+
+  XRectangle rects[4];
+  
+  rects[0].x = dimensions.x - dimensions.border;
+  rects[0].y = dimensions.y - dimensions.border;
+  rects[0].width = dimensions.border;
+  rects[0].height = dimensions.height + dimensions.border * 2;
+
+  rects[1].x = dimensions.x;
+  rects[1].y = dimensions.y - dimensions.border;
+  rects[1].width = dimensions.width + dimensions.border;
+  rects[1].height = dimensions.border;
+
+  rects[2].x = dimensions.x + dimensions.width;
+  rects[2].y = dimensions.y - dimensions.border;
+  rects[2].width = dimensions.border;
+  rects[2].height = dimensions.height + dimensions.border * 2;
+
+  rects[3].x = dimensions.x;
+  rects[3].y = dimensions.y + dimensions.height;
+  rects[3].width = dimensions.width + dimensions.border;
+  rects[3].height = dimensions.border;
+
+  XShapeCombineRectangles(display, window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
+
+  XRectangle rect;
+
+  rect.x = rect.y = rect.width = rect.height = 0;
+  
+  XShapeCombineRectangles(display, window, ShapeInput, 0, 0, &rect, 1, ShapeSet, 0);
+
+  XMapWindow(display, window);
+  
+  return (WindowSelection) {
+    .selection = dimensions,
+    .window    = window
+  };
+}
+
+void destroy_selection(WindowSelection* sel) {
+  XEvent ev;
+  
+  int destroy_check(Display* display, XEvent* ev, XPointer win) {
+    return ev->type == DestroyNotify && ev->xdestroywindow.window == *((Window*)win);
+  }
+  
+  XSetWindowBackground(display, sel->window, 0);
+  XClearWindow(display, sel->window);
+  XDestroyWindow(display, sel->window);
+  XIfEvent(display, &ev, &destroy_check, (XPointer)&sel->window);
+}
+
+void set_selection(WindowSelection* sel, Selection dimensions) {
+  XRectangle rects[4];
+
+  rects[0].x = dimensions.x - dimensions.border;
+  rects[0].y = dimensions.y - dimensions.border;
+  rects[0].width = dimensions.border;
+  rects[0].height = dimensions.height + dimensions.border * 2;
+
+  rects[1].x = dimensions.x;
+  rects[1].y = dimensions.y - dimensions.border;
+  rects[1].width = dimensions.width + dimensions.border;
+  rects[1].height = dimensions.border;
+
+  rects[2].x = dimensions.x + dimensions.width;
+  rects[2].y = dimensions.y - dimensions.border;
+  rects[2].width = dimensions.border;
+  rects[2].height = dimensions.height + dimensions.border * 2;
+
+  rects[3].x = dimensions.x;
+  rects[3].y = dimensions.y + dimensions.height;
+  rects[3].width = dimensions.width + dimensions.border;
+  rects[3].height = dimensions.border;
+
+  sel->selection = dimensions;
+  
+  XShapeCombineRectangles(display, sel->window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
+}
+
+int main(int argc, char **argv) {
+#ifdef __OpenBSD__
+  if (pledge("stdio rpath unix prot_exec", NULL) == -1)
+    err(1, "pledge");
+#endif
+
+  setup();
+  
+  // make a selection and make it as small as possible
+  WindowSelection ws = make_selection((Selection) {
+    .x = 0,
+    .y = 0,
+    .width = 0,
+    .height = 0,
+    .border = 0
+  });
+
   bool done = false;
   bool button_state = false;
+  int x = 0, y = 0, width = 0, height = 0;
+  int start_x = 0, start_y = 0;
+  XEvent event;
 
-  // grab the region data from X11
   switch_cursor(&cursor[1]);
-
-  sel_gv.function = GXxor;
-  sel_gv.subwindow_mode = IncludeInferiors;
-  sel_gv.line_width = BORDER;
-  sel_gv.foreground = FOREGROUND_COLOR;
-  sel_gc = XCreateGC(display, root, GCFunction | GCSubwindowMode | GCForeground | GCLineWidth, &sel_gv);
-
+  
   while (!done) {
     XNextEvent(display, &event);
-
     switch (event.type) {
     case ButtonPress:
       button_state = true;
@@ -90,7 +197,13 @@ Selection perform_selection () {
 
     case MotionNotify:
       if (button_state) {
-        XDrawRectangle(display, root, sel_gc, x, y, width, height);
+        set_selection(&ws, (Selection) {
+          .x = x,
+          .y = y,
+          .width = width,
+          .height = height,
+          .border = BORDER
+        });
 
         x = event.xbutton.x_root;
         y = event.xbutton.y_root;
@@ -113,9 +226,15 @@ Selection perform_selection () {
           height = start_y - y;
         }
 
-        XDrawRectangle(display, root, sel_gc, x, y, width, height);
-        XFlush(display);
+        set_selection(&ws, (Selection) {
+          .x = x,
+          .y = y,
+          .width = width,
+          .height = height,
+          .border = BORDER
+        });        
       }
+
       break;
 
     case ButtonRelease:
@@ -127,43 +246,20 @@ Selection perform_selection () {
       break;
     }
   }
-
-  XDrawRectangle(display, root, sel_gc, x, y, width, height);
-  XFlush(display);
+  
+  destroy_selection(&ws);
 
   XUngrabPointer(display, CurrentTime);
-  XFreeGC(display, sel_gc);
   XSync(display, 1);
-
-  return (Selection) {
-    .x = x,
-    .y = y,
-    .w = width,
-    .h = height,
-  };
-}
-
-int main(int argc, char **argv) {
-#ifdef __OpenBSD__
-  if (pledge("stdio rpath unix prot_exec", NULL) == -1)
-    err(1, "pledge");
-#endif
-
-  Selection drawn;
-  setup();
-
-  drawn = perform_selection();
-
-  printf("W=%d\nH=%d\nX=%d\nY=%d\n", drawn.w, drawn.h, drawn.x, drawn.y);
-  printf("G=%dx%d+%d+%d\n", drawn.w, drawn.h, drawn.x, drawn.y);
+  
+  Selection drawn = ws.selection;
+  
+  printf("W=%d\nH=%d\nX=%d\nY=%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
+  printf("G=%dx%d+%d+%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
 
   XFlush(display);
 
   preparetodie();
-
-  // hopefully this is enough time for the rectangles to disappear
-  // when drawing them over surfaces with fast redraws (videos spring to mind)
-  usleep(50000);
 
   return 0;
 }
