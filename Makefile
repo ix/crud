@@ -1,7 +1,8 @@
 CC ?= gcc
 PREFIX ?= /usr/local
-CFLAGS = `pkg-config --cflags x11 xext` -std=gnu99 -Wall -pedantic
-LDFLAGS = `pkg-config --libs x11 xext`
+CFLAGS ?= -Wall -pedantic
+CFLAGS += `pkg-config --cflags x11 xext` -std=gnu99
+LDFLAGS += `pkg-config --libs x11 xext`
 
 all:
 	$(CC) crud.c -o crud $(LDFLAGS) $(CFLAGS)
