@@ -238,8 +238,32 @@ int main(int argc, char **argv) {
       break;
 
     case ButtonRelease:
-      done = true;
-      button_state = false;
+      if (event.xbutton.x_root == start_x && event.xbutton.y_root == start_y) {
+        done = true;
+        button_state = false;
+
+        Window hroot, hovered;
+        int rx, ry, hx, hy;
+        unsigned int m;
+
+        if (XQueryPointer(display, root, &hroot, &hovered, &rx, &ry, &hx, &hy, &m)) {
+          XWindowAttributes attrs;
+          XGetWindowAttributes(display, hovered, &attrs);
+          // update with the selected window's attributes
+          set_selection(&ws, (Selection) {
+            .x = attrs.x,
+            .y = attrs.y,
+            .width = attrs.width,
+            .height = attrs.height,
+            .border = BORDER
+          });
+        }
+      }
+
+      else {
+        done = true;
+        button_state = false;
+      }
       break;
 
     default:
