@@ -6,4 +6,4 @@ It allows changing the selection border size and the color of the selection at c
 Like slop, it draws the selection using a window rather than XDrawRectangle, thus we can be sure the selection never leaves artifacts or shows up on a screenshot.
 
 # Inactive?
-crud is finished, and will only be updated with new features when they present a substantial quality-of-life improvement.
+crud is finished and usable, any first party updates to it are on a bugfix or quality-of-life basis. You are free to submit PRs and they will be merged if appropriate.
