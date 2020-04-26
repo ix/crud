@@ -273,13 +273,14 @@ int main(int argc, char **argv) {
 
   destroy_selection(&ws);
 
+  XUngrabKeyboard(display, CurrentTime);
   XUngrabPointer(display, CurrentTime);
   XSync(display, 1);
 
-  Selection drawn = ws.selection;
+  Selection* result = &ws.selection;
 
-  printf("W=%d\nH=%d\nX=%d\nY=%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
-  printf("G=%dx%d+%d+%d\n", drawn.width, drawn.height, drawn.x, drawn.y);
+  printf("W=%d\nH=%d\nX=%d\nY=%d\n", result->width, result->height, result->x, result->y);
+  printf("G=%dx%d+%d+%d\n", result->width, result->height, result->x, result->y);
 
   XFlush(display);
 
