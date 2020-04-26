@@ -11,8 +11,8 @@
 #include "config.h"
 
 enum Cursors {
-  Normal,
-  Crosshair
+  Normal = 0,
+  Crosshair = 1
 };
 
 typedef struct {
@@ -48,12 +48,34 @@ void setup() {
   root = RootWindow(display, screen);
 }
 
-void preparetodie() {
+void teardown() {
   XFreeCursor(display, cursor[0]);
   XFreeCursor(display, cursor[1]);
 
   if (display != NULL)
     XCloseDisplay(display);
+}
+
+void set_rects_from_selection(XRectangle* rects, Selection dimensions) {
+  rects[0].x = dimensions.x - BORDER;
+  rects[0].y = dimensions.y - BORDER;
+  rects[0].width = BORDER;
+  rects[0].height = dimensions.height + BORDER * 2;
+
+  rects[1].x = dimensions.x;
+  rects[1].y = dimensions.y - BORDER;
+  rects[1].width = dimensions.width + BORDER;
+  rects[1].height = BORDER;
+
+  rects[2].x = dimensions.x + dimensions.width;
+  rects[2].y = dimensions.y - BORDER;
+  rects[2].width = BORDER;
+  rects[2].height = dimensions.height + BORDER * 2;
+
+  rects[3].x = dimensions.x;
+  rects[3].y = dimensions.y + dimensions.height;
+  rects[3].width = dimensions.width + BORDER;
+  rects[3].height = BORDER;
 }
 
 void switch_cursor(Cursor* cursor) {
@@ -78,33 +100,12 @@ WindowSelection make_selection(Selection dimensions) {
                   0, CopyFromParent, InputOutput, CopyFromParent, value_mask, &attributes);
 
   XRectangle rects[4];
-
-  rects[0].x = dimensions.x - BORDER;
-  rects[0].y = dimensions.y - BORDER;
-  rects[0].width = BORDER;
-  rects[0].height = dimensions.height + BORDER * 2;
-
-  rects[1].x = dimensions.x;
-  rects[1].y = dimensions.y - BORDER;
-  rects[1].width = dimensions.width + BORDER;
-  rects[1].height = BORDER;
-
-  rects[2].x = dimensions.x + dimensions.width;
-  rects[2].y = dimensions.y - BORDER;
-  rects[2].width = BORDER;
-  rects[2].height = dimensions.height + BORDER * 2;
-
-  rects[3].x = dimensions.x;
-  rects[3].y = dimensions.y + dimensions.height;
-  rects[3].width = dimensions.width + BORDER;
-  rects[3].height = BORDER;
-
-  XShapeCombineRectangles(display, window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
-
   XRectangle rect;
 
+  set_rects_from_selection(rects, dimensions);
+  XShapeCombineRectangles(display, window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
+  
   rect.x = rect.y = rect.width = rect.height = 0;
-
   XShapeCombineRectangles(display, window, ShapeInput, 0, 0, &rect, 1, ShapeSet, 0);
 
   XMapWindow(display, window);
@@ -130,29 +131,8 @@ void destroy_selection(WindowSelection* sel) {
 
 void set_selection(WindowSelection* sel, Selection dimensions) {
   XRectangle rects[4];
-
-  rects[0].x = dimensions.x - BORDER;
-  rects[0].y = dimensions.y - BORDER;
-  rects[0].width = BORDER;
-  rects[0].height = dimensions.height + BORDER * 2;
-
-  rects[1].x = dimensions.x;
-  rects[1].y = dimensions.y - BORDER;
-  rects[1].width = dimensions.width + BORDER;
-  rects[1].height = BORDER;
-
-  rects[2].x = dimensions.x + dimensions.width;
-  rects[2].y = dimensions.y - BORDER;
-  rects[2].width = BORDER;
-  rects[2].height = dimensions.height + BORDER * 2;
-
-  rects[3].x = dimensions.x;
-  rects[3].y = dimensions.y + dimensions.height;
-  rects[3].width = dimensions.width + BORDER;
-  rects[3].height = BORDER;
-
+  set_rects_from_selection(rects, dimensions);
   sel->selection = dimensions;
-
   XShapeCombineRectangles(display, sel->window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
 }
 
@@ -284,7 +264,7 @@ int main(int argc, char **argv) {
 
   XFlush(display);
 
-  preparetodie();
+  teardown();
 
   return 0;
 }
