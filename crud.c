@@ -20,7 +20,6 @@ typedef struct {
   int y;
   int width;
   int height;
-  int border;
 } Selection;
 
 typedef struct {
@@ -70,9 +69,6 @@ WindowSelection make_selection(Selection dimensions) {
   unsigned long value_mask = CWBackPixel | CWOverrideRedirect | CWEventMask;
   Screen* sscreen = ScreenOfDisplay(display, DefaultScreen(display));
 
-  if (dimensions.border < 1)
-    dimensions.border = 1;
-
   attributes.background_pixel = FOREGROUND_COLOR;
   attributes.override_redirect = true;
   attributes.event_mask = StructureNotifyMask;
@@ -83,25 +79,25 @@ WindowSelection make_selection(Selection dimensions) {
 
   XRectangle rects[4];
 
-  rects[0].x = dimensions.x - dimensions.border;
-  rects[0].y = dimensions.y - dimensions.border;
-  rects[0].width = dimensions.border;
-  rects[0].height = dimensions.height + dimensions.border * 2;
+  rects[0].x = dimensions.x - BORDER;
+  rects[0].y = dimensions.y - BORDER;
+  rects[0].width = BORDER;
+  rects[0].height = dimensions.height + BORDER * 2;
 
   rects[1].x = dimensions.x;
-  rects[1].y = dimensions.y - dimensions.border;
-  rects[1].width = dimensions.width + dimensions.border;
-  rects[1].height = dimensions.border;
+  rects[1].y = dimensions.y - BORDER;
+  rects[1].width = dimensions.width + BORDER;
+  rects[1].height = BORDER;
 
   rects[2].x = dimensions.x + dimensions.width;
-  rects[2].y = dimensions.y - dimensions.border;
-  rects[2].width = dimensions.border;
-  rects[2].height = dimensions.height + dimensions.border * 2;
+  rects[2].y = dimensions.y - BORDER;
+  rects[2].width = BORDER;
+  rects[2].height = dimensions.height + BORDER * 2;
 
   rects[3].x = dimensions.x;
   rects[3].y = dimensions.y + dimensions.height;
-  rects[3].width = dimensions.width + dimensions.border;
-  rects[3].height = dimensions.border;
+  rects[3].width = dimensions.width + BORDER;
+  rects[3].height = BORDER;
 
   XShapeCombineRectangles(display, window, ShapeBounding, 0, 0, rects, 4, ShapeSet, 0);
 
@@ -135,25 +131,25 @@ void destroy_selection(WindowSelection* sel) {
 void set_selection(WindowSelection* sel, Selection dimensions) {
   XRectangle rects[4];
 
-  rects[0].x = dimensions.x - dimensions.border;
-  rects[0].y = dimensions.y - dimensions.border;
-  rects[0].width = dimensions.border;
-  rects[0].height = dimensions.height + dimensions.border * 2;
+  rects[0].x = dimensions.x - BORDER;
+  rects[0].y = dimensions.y - BORDER;
+  rects[0].width = BORDER;
+  rects[0].height = dimensions.height + BORDER * 2;
 
   rects[1].x = dimensions.x;
-  rects[1].y = dimensions.y - dimensions.border;
-  rects[1].width = dimensions.width + dimensions.border;
-  rects[1].height = dimensions.border;
+  rects[1].y = dimensions.y - BORDER;
+  rects[1].width = dimensions.width + BORDER;
+  rects[1].height = BORDER;
 
   rects[2].x = dimensions.x + dimensions.width;
-  rects[2].y = dimensions.y - dimensions.border;
-  rects[2].width = dimensions.border;
-  rects[2].height = dimensions.height + dimensions.border * 2;
+  rects[2].y = dimensions.y - BORDER;
+  rects[2].width = BORDER;
+  rects[2].height = dimensions.height + BORDER * 2;
 
   rects[3].x = dimensions.x;
   rects[3].y = dimensions.y + dimensions.height;
-  rects[3].width = dimensions.width + dimensions.border;
-  rects[3].height = dimensions.border;
+  rects[3].width = dimensions.width + BORDER;
+  rects[3].height = BORDER;
 
   sel->selection = dimensions;
 
@@ -173,8 +169,7 @@ int main(int argc, char **argv) {
     .x = 0,
     .y = 0,
     .width = 0,
-    .height = 0,
-    .border = 0
+    .height = 0
   });
 
   bool done = false;
@@ -209,8 +204,7 @@ int main(int argc, char **argv) {
           .x = x,
           .y = y,
           .width = width,
-          .height = height,
-          .border = BORDER
+          .height = height
         });
 
         x = event.xbutton.x_root;
@@ -238,8 +232,7 @@ int main(int argc, char **argv) {
           .x = x,
           .y = y,
           .width = width,
-          .height = height,
-          .border = BORDER
+          .height = height
         });
       }
 
@@ -262,8 +255,7 @@ int main(int argc, char **argv) {
             .x = attrs.x,
             .y = attrs.y,
             .width = attrs.width,
-            .height = attrs.height,
-            .border = BORDER
+            .height = attrs.height
           });
         }
       }
