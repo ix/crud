@@ -185,9 +185,15 @@ int main(int argc, char **argv) {
 
   switch_cursor(&cursor[1]);
 
+  XGrabKeyboard(display, root, GrabModeSync, GrabModeAsync, True, CurrentTime);
+  
   while (!done) {
     XNextEvent(display, &event);
     switch (event.type) {
+    case KeyPress:
+      if (XLookupKeysym(&event.xkey, 0) == XK_Escape) return 1;
+      break;
+      
     case ButtonPress:
       if (event.xbutton.button == Button3)
         return 1;
