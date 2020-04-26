@@ -189,6 +189,8 @@ int main(int argc, char **argv) {
     XNextEvent(display, &event);
     switch (event.type) {
     case ButtonPress:
+      if (event.xbutton.button == Button3)
+        return 1;
       button_state = true;
       x = start_x = event.xbutton.x_root;
       y = start_y = event.xbutton.y_root;
