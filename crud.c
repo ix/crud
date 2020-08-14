@@ -87,7 +87,7 @@ void switch_cursor(Cursor* cursor) {
                  mask, GrabModeAsync, GrabModeAsync,
                  None, *cursor, CurrentTime);
     sleep(0);
-  } while (WAIT_ON_ERROR && error);
+  } while (PERSISTENT_GRABBING && error);
 
   if (error)
     exit(1);
