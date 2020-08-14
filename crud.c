@@ -87,7 +87,10 @@ void switch_cursor(Cursor* cursor) {
                  mask, GrabModeAsync, GrabModeAsync,
                  None, *cursor, CurrentTime);
     sleep(0);
-  } while (error);
+  } while (WAIT_ON_ERROR && error);
+
+  if (error)
+    exit(1);
 }
 
 WindowSelection make_selection(Selection dimensions) {
