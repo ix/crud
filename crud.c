@@ -80,10 +80,17 @@ void set_rects_from_selection(XRectangle* rects, Selection dimensions) {
 
 void switch_cursor(Cursor* cursor) {
   int mask = PointerMotionMask | ButtonPressMask | ButtonReleaseMask;
+  int error;
 
-  XGrabPointer(display, root, True,
-               mask, GrabModeAsync, GrabModeAsync,
-               None, *cursor, CurrentTime);
+  do {
+    error = XGrabPointer(display, root, True,
+                 mask, GrabModeAsync, GrabModeAsync,
+                 None, *cursor, CurrentTime);
+    sleep(0);
+  } while (PERSISTENT_GRABBING && error);
+
+  if (error)
+    exit(1);
 }
 
 WindowSelection make_selection(Selection dimensions) {
